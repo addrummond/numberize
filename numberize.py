@@ -113,6 +113,7 @@ def replace_in_linked_string(string, start, end, links, replacement):
     for k in rks[1:-1]:
         setattr(links[k]['elem'], links[k]['type'], "")
 
+    # This hasn't ever happened, so this code isn't actually tested.
     if len(rks) >= 3:
         into2 = getattr(links[rks[-1]]['elem'], links[rks[-1]]['type']) or ""
         setattr(links[k]['elem'], links[k]['type'], into2[end - rks[-1][0]:])
@@ -124,7 +125,7 @@ with zipfile.ZipFile(sys.argv[1], 'r') as odt:
         search_and_replace(root, 1)
         search_and_replace2(root)
 
-        with zipfile.ZipFile("out.odt", 'w') as newone:
+        with zipfile.ZipFile(sys.argv[2] or "out.odt", 'w') as newone:
             for n in odt.namelist():
                 if n != "content.xml":
                     with odt.open(n, 'r') as f:
