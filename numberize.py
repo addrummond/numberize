@@ -41,25 +41,25 @@ heading_style_to_level = dict() # E.g. P60 -> 3
 mapping = dict()
 heading_numbers = dict() # E.g. "XX" -> [1,4,2] (= 1.4.2)
 
-_stylepref = "{urn:oasis:names:tc:opendocument:xmlns:style:1.0}"
-_textpref = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
+STYLEPREF = "{urn:oasis:names:tc:opendocument:xmlns:style:1.0}"
+TEXTPREF = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
 _hre = re.compile(r"_(\d+)$")
 def get_heading_styles(root):
     for elem in root:
         if strip_prefix(elem.tag) == "automatic-styles":
             for c in elem:
-                if c.attrib.has_key(_stylepref + 'family') and c.attrib[_stylepref + 'family'] == 'paragraph':
-                    s = c.attrib[_stylepref + 'parent-style-name']
+                if c.attrib.has_key(STYLEPREF + 'family') and c.attrib[STYLEPREF + 'family'] == 'paragraph':
+                    s = c.attrib[STYLEPREF + 'parent-style-name']
                     if s.startswith("Heading_"):
                         m = re.search(_hre, s)
                         if m:
-                            heading_style_to_level[c.attrib[_stylepref + 'name']] = int(m.group(1))
+                            heading_style_to_level[c.attrib[STYLEPREF + 'name']] = int(m.group(1))
 
 def search_and_replace_(current, current_number, current_heading_number):
     for child in current:
         if strip_prefix(child.tag) == "p":
             current_number = search_and_replace_paragraph(child, current_number)
-        elif strip_prefix(child.tag) == "h" and heading_style_to_level[child.attrib[_textpref + "style-name"]] > 1:
+        elif strip_prefix(child.tag) == "h" and heading_style_to_level[child.attrib[TEXTPREF + "style-name"]] > 1:
             current_heading_number = search_and_replace_heading(child, current_heading_number)
         else:
             search_and_replace_(child, current_number, current_heading_number)
@@ -85,8 +85,7 @@ _headre = re.compile(r"^([A-Z]+)\.(.*)$")
 def search_and_replace_heading(elem, start_number):
     text, links = flatten(elem)
 
-    level = heading_style_to_level[elem.attrib[_textpref + "style-name"]]
-    assert level - 1 <= len(start_number) + 1
+    level = heading_style_to_level[elem.attrib[TEXTPREF + "style-name"]]
 
     if level - 1 == len(start_number): # Non-embedded heading
         start_number[-1] += 1
@@ -123,9 +122,12 @@ def search_and_replace_paragraph2(elem):
             replace_in_linked_string(text, match.start() + 1, match.end() - 2 - len(match.group(2)), links, str(mapping[match.group(1)]))
     text, links = flatten(elem)
     for match in (re.finditer(_headre2, text) or []):
+        sl = [x for x in links.keys() if x != 'current_i']
+        sl.sort()
         if not heading_numbers.has_key(match.group(1)):
             sys.stderr.write("WARNING: Bad reference to $%s\n" % match.group(1))
         else:
+#            sys.stderr.write(str((text,filter(lambda x: x[1] - x[0] == 1, links))) + "\n\n")
             replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(1)]))
 
 def flatten_(elem, text, links):
@@ -142,7 +144,7 @@ def flatten_(elem, text, links):
                     text.write('\t')
                 text.write(child.tail or "")
                 l = len(child.tail or "") + (pr == "tab" and 1 or 0)
-                links[(links['current_i'], links['current_i'] + l)] = dict(type="tail", elem=elem)
+                links[(links['current_i'], links['current_i'] + l)] = dict(type="tail", elem=child)
                 links['current_i'] += l
     else:
         for c in elem:
