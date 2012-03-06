@@ -6,6 +6,17 @@ import xml.etree.ElementTree
 import zipfile
 import tempfile
 
+# From http://www.daniweb.com/software-development/python/code/216865
+def int2roman(number):
+    numerals = { 1 : "i", 4 : "iv", 5 : "v", 9 : "ix", 10 : "x", 40 : "xl", 
+        50 : "l", 90 : "xc", 100 : "c", 400 : "cd", 500 : "d", 900 : "cm", 1000 : "m" }
+    result = ""
+    for value, numeral in sorted(numerals.items(), reverse=True):
+        while number >= value:
+            result += numeral
+            number -= value
+    return result
+
 for x in [("office", "urn:oasis:names:tc:opendocument:xmlns:office:1.0"),
           ("style", "urn:oasis:names:tc:opendocument:xmlns:style:1.0"),
           ("text", "urn:oasis:names:tc:opendocument:xmlns:text:1.0"),
@@ -55,28 +66,33 @@ def get_heading_styles(root):
                         if m:
                             heading_style_to_level[c.attrib[STYLEPREF + 'name']] = int(m.group(1))
 
-def search_and_replace_(current, current_number, current_heading_number):
+def search_and_replace_(current, current_number, current_rm_number, current_heading_number):
     for child in current:
         if strip_prefix(child.tag) == "p":
-            current_number = search_and_replace_paragraph(child, current_number)
+            current_number, current_rm_number = search_and_replace_paragraph(child, current_number, current_rm_number)
         elif strip_prefix(child.tag) == "h" and heading_style_to_level[child.attrib[TEXTPREF + "style-name"]] > 1:
             current_heading_number = search_and_replace_heading(child, current_heading_number)
         else:
-            search_and_replace_(child, current_number, current_heading_number)
+            search_and_replace_(child, current_number, current_rm_number, current_heading_number)
 
-def search_and_replace(root, current_number, current_heading_number):
+def search_and_replace(root, current_number, current_rm_number, current_heading_number):
     get_heading_styles(root)
-    search_and_replace_(root, current_number, current_heading_number)
+    search_and_replace_(root, current_number, current_rm_number, current_heading_number)
 
-_labre = re.compile(r"\(([A-Z]+)\)\t")
-def search_and_replace_paragraph(elem, start_number):
+_labre = re.compile(r"\((#?[A-Z]+)\)\t")
+def search_and_replace_paragraph(elem, start_number, start_rm_number):
     text, links = flatten(elem)
     for match in (re.finditer(_labre, text) or []):
-        mapping[match.group(1)] = start_number
-        replace_in_linked_string(text, match.start() + 1, match.end() - 2, links, str(start_number))
-        start_number += 1
-#        sys.stderr.write("Found (%s)\n" % match.group(1))
-    return start_number
+        if match.group(1).startswith('#'):
+            rm = int2roman(start_rm_number)
+            mapping[match.group(1)[1:]] = rm
+            replace_in_linked_string(text, match.start() + 1, match.end() - 2, links, rm)
+            start_rm_number += 1
+        else:
+            mapping[match.group(1)] = start_number
+            replace_in_linked_string(text, match.start() + 1, match.end() - 2, links, str(start_number))
+            start_number += 1
+    return start_number, start_rm_number
 
 def str_heading_number(l):
     return '.'.join(map(str, l))
@@ -118,7 +134,6 @@ def search_and_replace_paragraph2(elem):
         if not mapping.has_key(match.group(1)):
             sys.stderr.write("WARNING: Bad reference to (%s)\n" % match.group(1))
         else:
-#            sys.stderr.write("Replacing (%s) with (%i)\n" % (match.group(1), mapping[match.group(1)]))
             replace_in_linked_string(text, match.start() + 1, match.end() - 2 - len(match.group(2)), links, str(mapping[match.group(1)]))
     text, links = flatten(elem)
     for match in (re.finditer(_headre2, text) or []):
@@ -127,7 +142,6 @@ def search_and_replace_paragraph2(elem):
         if not heading_numbers.has_key(match.group(1)):
             sys.stderr.write("WARNING: Bad reference to $%s\n" % match.group(1))
         else:
-#            sys.stderr.write(str((text,filter(lambda x: x[1] - x[0] == 1, links))) + "\n\n")
             replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(1)]))
 
 def flatten_(elem, text, links):
@@ -173,13 +187,13 @@ def replace_in_linked_string(string, start, end, links, replacement):
     # This hasn't ever happened, so this code isn't actually tested.
     if len(rks) >= 3:
         into2 = getattr(links[rks[-1]]['elem'], links[rks[-1]]['type']) or ""
-        setattr(links[k]['elem'], links[k]['type'], into2[end - rks[-1][0]:])
+        setattr(links[rks[-1]]['elem'], links[k]['type'], into2[end - rks[-1][0]:])
 
 with zipfile.ZipFile(sys.argv[1], 'r') as odt:
     with odt.open('content.xml', 'r') as content:
         doc = xml.etree.ElementTree.parse(content)
         root = doc.getroot()
-        search_and_replace(root, 1, [0])
+        search_and_replace(root, 1, 1, [0])
         search_and_replace2(root)
 
         with zipfile.ZipFile(sys.argv[2] or "out.odt", 'w') as newone:
