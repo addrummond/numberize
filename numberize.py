@@ -1,14 +1,34 @@
 import sys
+import os
 import re
-import xml.etree.ElementTree
 import StringIO
+import xml.etree.ElementTree
+import zipfile
+import tempfile
+
+for x in [("office", "urn:oasis:names:tc:opendocument:xmlns:office:1.0"),
+          ("style", "urn:oasis:names:tc:opendocument:xmlns:style:1.0"),
+          ("text", "urn:oasis:names:tc:opendocument:xmlns:text:1.0"),
+          ("xlink", "http://www.w3.org/1999/xlink"),
+          ("ooo", "http://openoffice.org/2004/office"),
+          ("dc", "http://purl.org/dc/elements/1.1/"),
+          ("meta", "urn:oasis:names:tc:opendocument:xmlns:meta:1.0"),
+          ("table", "urn:oasis:names:tc:opendocument:xmlns:table:1.0"),
+          ("draw", "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"),
+          ("fo", "urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"),
+          ("number", "urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0"),
+          ("chart", "urn:oasis:names:tc:opendocument:xmlns:chart:1.0"),
+          ("svg", "urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"),
+          ("dr3d", "urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0"),
+          ("math", "http://www.w3.org/1998/Math/MathML"),
+          ("form", "urn:oasis:names:tc:opendocument:xmlns:form:1.0"),
+          ("script", "urn:oasis:names:tc:opendocument:xmlns:script:1.0"),
+          ("ooow", "http://openoffice.org/2004/writer"),
+          ("oooc", "http://openoffice.org/2004/calc"),
+          ("dom", "http://www.w3.org/2001/xml-events")]:
+    xml.etree.ElementTree.register_namespace(x[0], x[1])
 
 assert sys.argv[1]
-
-doc = xml.etree.ElementTree.parse(sys.argv[1])
-root = doc.getroot()
-
-f = open("/tmp/de", "w")
 
 _tagre = re.compile(r"(?:\{[^}]*\})?(.*)")
 def strip_prefix(tagname):
@@ -46,7 +66,6 @@ def search_and_replace2(current):
 _labre2 = re.compile(r"\(([A-Z]+)[a-z]*\)[^\t]")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
-    f.write(text.encode('utf-8') + "\n\n")
     for match in (re.finditer(_labre2, text) or []):
         if not mapping.has_key(match.group(1)):
             sys.stderr.write("WARNING: Bad reference to (%s)\n" % match.group(1))
@@ -57,23 +76,19 @@ def search_and_replace_paragraph2(elem):
 def flatten_(elem, text, links):
     if strip_prefix(elem.tag) == "span":
         if elem.text:
-            # Convert <tab> tags to tabs in the text.
-            tabs_at = []
-            for child in elem:
-                if strip_prefix(child.tag) == "tab":
-                    tabs_at.append(len(elem.text) - (child.tail and len(child.tail) or 0))
+            text.write(elem.text)
+            links[(links['current_i'], links['current_i']+len(elem.text))] = dict(type="text", elem=elem)
+            links['current_i'] += len(elem.text)
 
-            for i in xrange(len(elem.text)):
-                if i in tabs_at:
-                    sys.stderr.write("TAB\n")
+        for child in elem:
+            pr = strip_prefix(child.tag)
+            if child.tail or pr == "tab": # Regex matching is sensitive to tabs so must include these.
+                if pr == "tab":
                     text.write('\t')
-                text.write(elem.text[i])
-            if len(tabs_at) > 0 and tabs_at[len(tabs_at)-1] == len(elem.text):
-                sys.stderr.write("TAB\n")
-                text.write('\t')
-
-            links[(links['current_i'], links['current_i']+len(elem.text))] = elem
-            links['current_i'] += len(elem.text) + len(tabs_at)
+                text.write(child.tail or "")
+                l = len(child.tail or "") + (pr == "tab" and 1 or 0)
+                links[(links['current_i'], links['current_i'] + l)] = dict(type="tail", elem=elem)
+                links['current_i'] += l
     else:
         for c in elem:
             current_i = flatten_(c, text, links)
@@ -94,8 +109,24 @@ def replace_in_linked_string(string, start, end, links, replacement):
         en = max(end, k[1])
         new = string[0:st] + replacement[replacement_pos:replacement_pos+en-st] + string[en:]
         replacement_pos += en-st
-        links[k].text = new
+        setattr(links[k]['elem'], links[k]['type'], new)
 
-search_and_replace(root, 1)
-search_and_replace2(root)
-#xml.etree.ElementTree.dump(root)
+with zipfile.ZipFile(sys.argv[1], 'r') as odt:
+    with odt.open('content.xml', 'r') as content:
+        doc = xml.etree.ElementTree.parse(content)
+        root = doc.getroot()
+        search_and_replace(root, 1)
+        search_and_replace2(root)
+
+        with zipfile.ZipFile("out.odt", 'w') as newone:
+            for n in odt.namelist():
+                if n != "content.xml":
+                    with odt.open(n, 'r') as f:
+                        newone.writestr(n, f.read())
+                else:
+                    with tempfile.NamedTemporaryFile(delete=False) as t:
+                        t.write("""<?xml version="1.0" encoding="utf-8" standalone="yes"?>""")
+                        doc.write(t, 'utf-8')
+                        t.close()
+                        newone.write(t.name, n)
+                        os.remove(t.name)
