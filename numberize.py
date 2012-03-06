@@ -37,14 +37,36 @@ def strip_prefix(tagname):
 def permissible_label_char(c):
     return c.isupper()
 
+heading_style_to_level = dict() # E.g. P60 -> 3
 mapping = dict()
+heading_numbers = dict() # E.g. "XX" -> [1,4,2] (= 1.4.2)
 
-def search_and_replace(current, current_number):
+_stylepref = "{urn:oasis:names:tc:opendocument:xmlns:style:1.0}"
+_textpref = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
+_hre = re.compile(r"_(\d+)$")
+def get_heading_styles(root):
+    for elem in root:
+        if strip_prefix(elem.tag) == "automatic-styles":
+            for c in elem:
+                if c.attrib.has_key(_stylepref + 'family') and c.attrib[_stylepref + 'family'] == 'paragraph':
+                    s = c.attrib[_stylepref + 'parent-style-name']
+                    if s.startswith("Heading_"):
+                        m = re.search(_hre, s)
+                        if m:
+                            heading_style_to_level[c.attrib[_stylepref + 'name']] = int(m.group(1))
+
+def search_and_replace_(current, current_number, current_heading_number):
     for child in current:
         if strip_prefix(child.tag) == "p":
             current_number = search_and_replace_paragraph(child, current_number)
+        elif strip_prefix(child.tag) == "h" and heading_style_to_level[child.attrib[_textpref + "style-name"]] > 1:
+            current_heading_number = search_and_replace_heading(child, current_heading_number)
         else:
-            search_and_replace(child, current_number)
+            search_and_replace_(child, current_number, current_heading_number)
+
+def search_and_replace(root, current_number, current_heading_number):
+    get_heading_styles(root)
+    search_and_replace_(root, current_number, current_heading_number)
 
 _labre = re.compile(r"\(([A-Z]+)\)\t")
 def search_and_replace_paragraph(elem, start_number):
@@ -56,6 +78,32 @@ def search_and_replace_paragraph(elem, start_number):
 #        sys.stderr.write("Found (%s)\n" % match.group(1))
     return start_number
 
+def str_heading_number(l):
+    return '.'.join(map(str, l))
+
+_headre = re.compile(r"^([A-Z]+)\.(.*)$")
+def search_and_replace_heading(elem, start_number):
+    text, links = flatten(elem)
+
+    level = heading_style_to_level[elem.attrib[_textpref + "style-name"]]
+    assert level - 1 <= len(start_number) + 1
+
+    if level - 1 == len(start_number): # Non-embedded heading
+        start_number[-1] += 1
+    elif level - 1 < len(start_number):
+        for _ in xrange(level - 1, len(start_number)): start_number.pop()
+        start_number[-1] += 1
+    elif level - 1 > len(start_number):
+        start_number.append(1)
+
+    match = re.match(_headre, text)
+    if match:
+        heading_numbers[match.group(1)] = map(lambda x: x, start_number)
+        replace_in_linked_string(text, match.start(), match.start() + len(match.group(1)), links, str_heading_number(start_number))
+    else:
+        replace_in_linked_string(text, 0, 1, links, str_heading_number(start_number) + '. ' + text[0])
+    return start_number
+
 def search_and_replace2(current):
     for child in current:
         if strip_prefix(child.tag) == "p":
@@ -64,6 +112,7 @@ def search_and_replace2(current):
             search_and_replace2(child)
 
 _labre2 = re.compile(r"\(([A-Z]+)([a-z]*)\)[^\t]")
+_headre2 = re.compile(r"\$([A-Z]+)")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
     for match in (re.finditer(_labre2, text) or []):
@@ -72,6 +121,12 @@ def search_and_replace_paragraph2(elem):
         else:
 #            sys.stderr.write("Replacing (%s) with (%i)\n" % (match.group(1), mapping[match.group(1)]))
             replace_in_linked_string(text, match.start() + 1, match.end() - 2 - len(match.group(2)), links, str(mapping[match.group(1)]))
+    text, links = flatten(elem)
+    for match in (re.finditer(_headre2, text) or []):
+        if not heading_numbers.has_key(match.group(1)):
+            sys.stderr.write("WARNING: Bad reference to $%s\n" % match.group(1))
+        else:
+            replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(1)]))
 
 def flatten_(elem, text, links):
     if strip_prefix(elem.tag) == "span":
@@ -122,7 +177,7 @@ with zipfile.ZipFile(sys.argv[1], 'r') as odt:
     with odt.open('content.xml', 'r') as content:
         doc = xml.etree.ElementTree.parse(content)
         root = doc.getroot()
-        search_and_replace(root, 1)
+        search_and_replace(root, 1, [0])
         search_and_replace2(root)
 
         with zipfile.ZipFile(sys.argv[2] or "out.odt", 'w') as newone:
