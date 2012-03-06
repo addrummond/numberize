@@ -46,14 +46,14 @@ def search_and_replace(current, current_number):
         else:
             search_and_replace(child, current_number)
 
-_labre = re.compile(r"\(([A-Z]+)[a-z]*\)\t")
+_labre = re.compile(r"\(([A-Z]+)\)\t")
 def search_and_replace_paragraph(elem, start_number):
     text, links = flatten(elem)
     for match in (re.finditer(_labre, text) or []):
         mapping[match.group(1)] = start_number
-        replace_in_linked_string(text, match.start(), match.end()-1, links, str(start_number))
+        replace_in_linked_string(text, match.start() + 1, match.end() - 2, links, str(start_number))
         start_number += 1
-        sys.stderr.write("Found (%s)\n" % match.group(1))
+#        sys.stderr.write("Found (%s)\n" % match.group(1))
     return start_number
 
 def search_and_replace2(current):
@@ -63,15 +63,15 @@ def search_and_replace2(current):
         else:
             search_and_replace2(child)
 
-_labre2 = re.compile(r"\(([A-Z]+)[a-z]*\)[^\t]")
+_labre2 = re.compile(r"\(([A-Z]+)([a-z]*)\)[^\t]")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
     for match in (re.finditer(_labre2, text) or []):
         if not mapping.has_key(match.group(1)):
             sys.stderr.write("WARNING: Bad reference to (%s)\n" % match.group(1))
         else:
-            sys.stderr.write("Replacing (%s) with (%i)\n" % (match.group(1), mapping[match.group(1)]))
-            replace_in_linked_string(text, match.start(), match.end(), links, str(mapping[match.group(1)]))
+#            sys.stderr.write("Replacing (%s) with (%i)\n" % (match.group(1), mapping[match.group(1)]))
+            replace_in_linked_string(text, match.start() + 1, match.end() - 2 - len(match.group(2)), links, str(mapping[match.group(1)]))
 
 def flatten_(elem, text, links):
     if strip_prefix(elem.tag) == "span":
@@ -102,14 +102,20 @@ def flatten(elem):
 def replace_in_linked_string(string, start, end, links, replacement):
     ks = links.keys()
     ks.sort()
-    rks = filter(lambda k: k[0] >= start and k[1] <= end, ks)
-    replacement_pos = 0
-    for k in rks:
-        st = start - k[0]
-        en = max(end, k[1])
-        new = string[0:st] + replacement[replacement_pos:replacement_pos+en-st] + string[en:]
-        replacement_pos += en-st
-        setattr(links[k]['elem'], links[k]['type'], new)
+    rks = filter(lambda k: k[0] >= start and k[0] <= end, ks)
+
+    assert rks
+
+    into = getattr(links[rks[0]]['elem'], links[rks[0]]['type']) or ""
+    new = into[:start-rks[0][0]] + replacement + into[start-rks[0][0]+(end-start):]
+    setattr(links[rks[0]]['elem'], links[rks[0]]['type'], new)
+
+    for k in rks[1:-1]:
+        setattr(links[k]['elem'], links[k]['type'], "")
+
+    if len(rks) >= 3:
+        into2 = getattr(links[rks[-1]]['elem'], links[rks[-1]]['type']) or ""
+        setattr(links[k]['elem'], links[k]['type'], into2[end - rks[-1][0]:])
 
 with zipfile.ZipFile(sys.argv[1], 'r') as odt:
     with odt.open('content.xml', 'r') as content:
