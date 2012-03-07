@@ -11,7 +11,7 @@ The output can be imported back into google docs, or opened using
 OpenOffice or a number of other packages.
 
 This should work with the standard OS X Python installation (so long
-as the Python version is >= 2.5).
+as the Python version is ≥ 2.5).
 
 To introduce a numbered example, write a series of upper case letters
 enclosed in parantheses, followed by a tab:
