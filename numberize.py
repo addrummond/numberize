@@ -173,21 +173,37 @@ def flatten(elem):
 def replace_in_linked_string(string, start, end, links, replacement):
     ks = links.keys()
     ks.sort()
-    rks = filter(lambda k: k[0] <= end and k[1] > start, ks)
+    rks = filter(lambda k: k[0] < end and k[1] > start, ks)
 
     assert rks
+    sys.stderr.write(str((start,end)) + "\n")
+#    debug_print_linked_string(string, links, keys=rks)
 
     into = getattr(links[rks[0]]['elem'], links[rks[0]]['type']) or ""
     new = into[:start-rks[0][0]] + replacement + into[start-rks[0][0]+(end-start):]
     setattr(links[rks[0]]['elem'], links[rks[0]]['type'], new)
+#    sys.stderr.write("Replacing 1st with '%s'\n" % new)
 
     for k in rks[1:-1]:
         setattr(links[k]['elem'], links[k]['type'], "")
+#        sys.stderr.write("Setting %i to empty\n" % rks.index(k))
 
     # This hasn't ever happened, so this code isn't actually tested.
-    if len(rks) >= 3:
+    if len(rks) >= 2:
         into2 = getattr(links[rks[-1]]['elem'], links[rks[-1]]['type']) or ""
-        setattr(links[rks[-1]]['elem'], links[k]['type'], into2[end - rks[-1][0]:])
+        new = into2[end - rks[-1][0]:]
+        setattr(links[rks[-1]]['elem'], links[rks[-1]]['type'], new)
+#        sys.stderr.write("Setting last to '%s'\n" % new)
+
+def debug_print_linked_string(string, links, keys=None):
+    if keys is None: keys = links.keys()
+    sys.stderr.write("[[\n")
+    lks = links.keys()
+    lks.sort()
+    for k in lks:
+        if k != "current_i" and k in keys:
+            sys.stderr.write("%i, %i [%s]: '%s'\n" % (k[0], k[1], links[k]['type'], string[k[0]:k[1]].encode('utf-8')))
+    sys.stderr.write("]]\n\n")
 
 with zipfile.ZipFile(sys.argv[1], 'r') as odt:
     with odt.open('content.xml', 'r') as content:
