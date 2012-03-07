@@ -37,7 +37,7 @@ script is not aware of the sub-examples (you could just as well write
 arabic-numbered example in the document).
 
 References to non-existent examples are ignored. This can happen
-sometimes if you put acronymys in parantheses (e.g. "The Uniformity of
+sometimes if you put acronyms in parantheses (e.g. "The Uniformity of
 Theta Assignment Hypothesis (UTAH)").  In this case, so long as there
 is no example labeled UTAH, nothing will go wrong.
 
