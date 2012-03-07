@@ -145,7 +145,7 @@ def search_and_replace_paragraph2(elem):
             replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(1)]))
 
 def flatten_(elem, text, links):
-    if strip_prefix(elem.tag) == "span":
+    if strip_prefix(elem.tag) == "span" and not (len(list(elem)) > 0 and strip_prefix(elem[0].tag) == "note"):
         if elem.text:
             text.write(elem.text)
             links[(links['current_i'], links['current_i']+len(elem.text))] = dict(type="text", elem=elem)
@@ -176,7 +176,6 @@ def replace_in_linked_string(string, start, end, links, replacement):
     rks = filter(lambda k: k[0] < end and k[1] > start, ks)
 
     assert rks
-    sys.stderr.write(str((start,end)) + "\n")
 #    debug_print_linked_string(string, links, keys=rks)
 
     into = getattr(links[rks[0]]['elem'], links[rks[0]]['type']) or ""
