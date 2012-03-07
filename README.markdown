@@ -18,26 +18,28 @@ enclosed in parantheses, followed by a tab:
 
     (XYZ)   My example...
 
-To refer back to the example, simply write `(XYZ)' in the text. If you
+To refer back to the example, simply write `(XYZ)` in the text. If you
 want the example to be numbered using Roman numerals, introduce the
-upper case letters with a `#':
+upper case letters with a `#`:
 
     (#ABC)  My Roman-numbered example.
 
-Then refer back to it as `(ABC)'. The script handles references to a/b/c
-examples in a very basic way. If you have an example of the following
-sort:
+Then refer back to it as `(ABC)`. The script handles references to
+a/b/c examples in a very basic way. If you have an example of the
+following sort:
 
     (LMN)   a. Blah blah blah...
             b. Blah blah blah...
 
-You can refer either to `(LMN)', `(LMNa)' or `(LMNb)'. Note that the script
-is not aware of the sub-examples (you could just as well write `(LMNz)',
-which would come out as `(2z)' if `(LMN)' is the second arabic-numbered
-example in the document).
+You can refer either to `(LMN)`, `(LMNa)` or `(LMNb)`. Note that the
+script is not aware of the sub-examples (you could just as well write
+`(LMNz)`, which would come out as `(2z)` if `(LMN)` is the second
+arabic-numbered example in the document).
 
-Headings and sub-headings are automatically numbered in the output. If you want to refer back to a section, introduce the heading with a sequence of upper case latters followed by a period:
+Headings and sub-headings are automatically numbered in the output. If
+you want to refer back to a section, introduce the heading with a
+sequence of upper case latters followed by a period:
 
     ABC. My heading
 
-You can then get the number of this heading using `$ABC'.
+You can then get the number of this heading using `$ABC`.
