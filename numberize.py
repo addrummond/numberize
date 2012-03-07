@@ -98,6 +98,7 @@ def str_heading_number(l):
     return '.'.join(map(str, l))
 
 _headre = re.compile(r"^([A-Z]+)\.(.*)$")
+_unnumbered = re.compile(r"^(\*\s*).*$")
 def search_and_replace_heading(elem, start_number):
     text, links = flatten(elem)
 
@@ -116,7 +117,12 @@ def search_and_replace_heading(elem, start_number):
         heading_numbers[match.group(1)] = map(lambda x: x, start_number)
         replace_in_linked_string(text, match.start(), match.start() + len(match.group(1)), links, str_heading_number(start_number))
     else:
-        replace_in_linked_string(text, 0, 1, links, str_heading_number(start_number) + '. ' + text[0])
+        match2 = re.match(_unnumbered, text)
+        if match2:
+            # An unnumbered heading -- just remove the '*' and any whitespace following it.
+            replace_in_linked_string(text, 0, len(match2.group(1)), links, "")
+        else:
+            replace_in_linked_string(text, 0, 1, links, str_heading_number(start_number) + '. ' + text[0])
     return start_number
 
 def search_and_replace2(current):
