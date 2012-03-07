@@ -47,4 +47,9 @@ sequence of upper case latters followed by a period:
 
     ABC. My heading
 
-You can then get the number of this heading using `$ABC`.
+You can then get the number of this heading using `$ABC`. If you do
+not want a heading to be numbered, precede it with a `*':
+
+    *My heading
+
+The `*' is stripped in the output and the heading is left unnumbered.
