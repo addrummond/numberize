@@ -173,7 +173,7 @@ def flatten(elem):
 def replace_in_linked_string(string, start, end, links, replacement):
     ks = links.keys()
     ks.sort()
-    rks = filter(lambda k: k[0] >= start and k[0] <= end, ks)
+    rks = filter(lambda k: k[0] <= end and k[1] > start, ks)
 
     assert rks
 
