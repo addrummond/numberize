@@ -36,6 +36,11 @@ script is not aware of the sub-examples (you could just as well write
 `(LMNz)`, which would come out as `(2z)` if `(LMN)` is the second
 arabic-numbered example in the document).
 
+References to non-existent examples are ignored. This can happen
+sometimes if you put acronymys in parantheses (e.g. "The Uniformity of
+Theta Assignment Hypothesis (UTAH)").  In this case, so long as there
+is no example labeled UTAH, nothing will go wrong.
+
 Headings and sub-headings are automatically numbered in the output. If
 you want to refer back to a section, introduce the heading with a
 sequence of upper case latters followed by a period:
