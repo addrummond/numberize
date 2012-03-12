@@ -86,11 +86,11 @@ def search_and_replace_paragraph(elem, start_number, start_rm_number):
         if match.group(1).startswith('#'):
             rm = int2roman(start_rm_number)
             mapping[match.group(1)[1:]] = rm
-            replace_in_linked_string(text, match.start() + 1, match.end() - 2, links, rm)
+            replace_in_linked_string(text, match.start(1), match.end(1), links, rm)
             start_rm_number += 1
         else:
             mapping[match.group(1)] = start_number
-            replace_in_linked_string(text, match.start() + 1, match.end() - 2, links, str(start_number))
+            replace_in_linked_string(text, match.start(1), match.end(1), links, str(start_number))
             start_number += 1
     return start_number, start_rm_number
 
@@ -115,12 +115,12 @@ def search_and_replace_heading(elem, start_number):
     match = re.match(_headre, text)
     if match:
         heading_numbers[match.group(1)] = map(lambda x: x, start_number)
-        replace_in_linked_string(text, match.start(), match.start() + len(match.group(1)), links, str_heading_number(start_number))
+        replace_in_linked_string(text, match.start(1), match.end(1), links, str_heading_number(start_number))
     else:
         match2 = re.match(_unnumbered, text)
         if match2:
             # An unnumbered heading -- just remove the '*' and any whitespace following it.
-            replace_in_linked_string(text, 0, len(match2.group(1)), links, "")
+            replace_in_linked_string(text, 0, match2.end(1), links, "")
         else:
             replace_in_linked_string(text, 0, 1, links, str_heading_number(start_number) + '. ' + text[0])
     return start_number
@@ -132,7 +132,7 @@ def search_and_replace2(current):
         else:
             search_and_replace2(child)
 
-_labre2 = re.compile(r"\(([A-Z]+)([a-z]*)\)[^\t]")
+_labre2 = re.compile(r"\(([A-Z]+)(?:[a-z]*)(?:-([A-Z]+)(?:[a-z]*))?\)[^\t]")
 _headre2 = re.compile(r"\$([A-Z]+)")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
@@ -140,7 +140,14 @@ def search_and_replace_paragraph2(elem):
         if not mapping.has_key(match.group(1)):
             sys.stderr.write("WARNING: Bad reference to (%s)\n" % match.group(1))
         else:
-            replace_in_linked_string(text, match.start() + 1, match.end() - 2 - len(match.group(2)), links, str(mapping[match.group(1)]))
+            replace_in_linked_string(text, match.start(1), match.end(1), links, str(mapping[match.group(1)]))
+
+        if match.group(2):
+            if not mapping.has_key(match.group(2)):
+                sys.stderr.write("WARNING: Bad reference to (%s)\n" % match.group(2))
+            else:
+                replace_in_linked_string(text, match.start(2), match.end(2), links, str(mapping[match.group(2)]))
+
     text, links = flatten(elem)
     for match in (re.finditer(_headre2, text) or []):
         sl = [x for x in links.keys() if x != 'current_i']

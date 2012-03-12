@@ -18,9 +18,14 @@ enclosed in parantheses, followed by a tab:
 
     (XYZ)   My example...
 
-To refer back to the example, simply write `(XYZ)` in the text. If you
-want the example to be numbered using Roman numerals, introduce the
-upper case letters with a `#`:
+To refer back to the example, simply write `(XYZ)` in the text. In
+addition to references to individual examples, the script recognizes
+ranges of the following form:
+
+    ...blah blah blah exampels (AB-XY)...
+
+If you want the example to be numbered using Roman numerals, introduce
+the upper case letters with a `#`:
 
     (#ABC)  My Roman-numbered example.
 
