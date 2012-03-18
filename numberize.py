@@ -127,7 +127,7 @@ def search_and_replace_heading(elem, start_number):
             # An unnumbered heading -- just remove the '*' and any whitespace following it.
             replace_in_linked_string(text, 0, match2.end(1), links, "")
         else:
-            replace_in_linked_string(text, 0, 1, links, str_heading_number(start_number) + '. ' + text[0])
+            replace_in_linked_string(text, 0, 1, links, str_heading_number(start_number) + '. ' + (text and text[0] or ''))
     return start_number
 
 def search_and_replace2(current):
@@ -137,7 +137,7 @@ def search_and_replace2(current):
         else:
             search_and_replace2(child)
 
-_labre2 = re.compile(r"\(([A-Z]+)(?:[a-z]*)(?:-([A-Z]+)(?:[a-z]*))?\)[^\t]")
+_labre2 = re.compile(r"\(([A-Z]+)(?:[a-z]*)(?:-(?:[a-z]+)|(?:([A-Z]+)(?:[a-z]*)))?\)[^\t]")
 _headre2 = re.compile(r"\$([A-Z]+)")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
@@ -193,7 +193,8 @@ def replace_in_linked_string(string, start, end, links, replacement):
     ks.sort()
     rks = filter(lambda k: k[0] < end and k[1] > start, ks)
 
-    assert rks
+    if len(rks) == 0:
+        return
 #    debug_print_linked_string(string, links, keys=rks)
 
     into = getattr(links[rks[0]]['elem'], links[rks[0]]['type']) or ""
