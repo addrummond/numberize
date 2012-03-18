@@ -84,7 +84,7 @@ def search_and_replace_paragraph(elem, start_number, start_rm_number):
     text, links = flatten(elem)
     for match in (re.finditer(_labre, text) or []):
         if mapping.has_key(match.group(1).lstrip('#')):
-x            sys.stderr.write("WARNING: Label (%s) is multiply defined.\n" % match.group(1).lstrip('#'))
+            sys.stderr.write("WARNING: Label (%s) is multiply defined.\n" % match.group(1).lstrip('#'))
 
         if match.group(1).startswith('#'):
             rm = int2roman(start_rm_number)
