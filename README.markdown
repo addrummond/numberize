@@ -24,6 +24,8 @@ ranges of the following form:
 
     ...blah blah blah examples (AB-XY)...
 
+You can also write things like `(ABc-d)`, which come out as `(20c-d)`.
+
 If you want the example to be numbered using Roman numerals, introduce
 the upper case letters with a `#`:
 
