@@ -83,6 +83,9 @@ _labre = re.compile(r"\((#?[A-Z]+)\)\t")
 def search_and_replace_paragraph(elem, start_number, start_rm_number):
     text, links = flatten(elem)
     for match in (re.finditer(_labre, text) or []):
+        if mapping.has_key(match.group(1).lstrip('#')):
+x            sys.stderr.write("WARNING: Label (%s) is multiply defined.\n" % match.group(1).lstrip('#'))
+
         if match.group(1).startswith('#'):
             rm = int2roman(start_rm_number)
             mapping[match.group(1)[1:]] = rm
@@ -114,6 +117,8 @@ def search_and_replace_heading(elem, start_number):
 
     match = re.match(_headre, text)
     if match:
+        if heading_mumbers.has_key(match.group(1)):
+            sys.stderr.write("WARNING: Heading label '%s' is multiply defined.\n" % match.group(1))
         heading_numbers[match.group(1)] = map(lambda x: x, start_number)
         replace_in_linked_string(text, match.start(1), match.end(1), links, str_heading_number(start_number))
     else:
