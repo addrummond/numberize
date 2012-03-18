@@ -117,7 +117,7 @@ def search_and_replace_heading(elem, start_number):
 
     match = re.match(_headre, text)
     if match:
-        if heading_mumbers.has_key(match.group(1)):
+        if heading_numbers.has_key(match.group(1)):
             sys.stderr.write("WARNING: Heading label '%s' is multiply defined.\n" % match.group(1))
         heading_numbers[match.group(1)] = map(lambda x: x, start_number)
         replace_in_linked_string(text, match.start(1), match.end(1), links, str_heading_number(start_number))
