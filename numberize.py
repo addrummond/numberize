@@ -168,10 +168,10 @@ def search_and_replace_paragraph2(elem):
         else:
             sl = [x for x in links.keys() if x != 'current_i']
             sl.sort()
-            if not heading_numbers.has_key(match.group(1)):
+            if not heading_numbers.has_key(match.group(2)):
                 sys.stderr.write("WARNING: Bad reference to $%s\n" % match.group(1))
             else:
-                replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(1)]))
+                replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(2)]))
 
 def flatten_(elem, text, links):
     if strip_prefix(elem.tag) == "span" and not (len(list(elem)) > 0 and strip_prefix(elem[0].tag) == "note"):
