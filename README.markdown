@@ -24,15 +24,13 @@ ranges of the following form:
 
     ...blah blah blah examples (AB-XY)...
 
-You can also write things like `(ABc-d)`, which come out as `(20c-d)`.
-
 If you want the example to be numbered using Roman numerals, introduce
 the upper case letters with a `#`:
 
     (#ABC)  My Roman-numbered example.
 
 Then refer back to it as `(ABC)`. The script handles references to
-a/b/c examples in a very basic way. If you have an example of the
+a/b/c subexamples in a very basic way. If you have an example of the
 following sort:
 
     (LMN)   a. Blah blah blah...
@@ -42,6 +40,24 @@ You can refer either to `(LMN)`, `(LMNa)` or `(LMNb)`. Note that the
 script is not aware of the sub-examples (you could just as well write
 `(LMNz)`, which would come out as `(2z)` if `(LMN)` is the second
 arabic-numbered example in the document).
+You can also write things like `(ABc-d)`, which come out as `(20c-d)`.
+
+To avoid bracketed words being mistaken for references to examples,
+the script assumes that no subexamples are labeled with more than one
+letter. (If a brackted word is mistaken for a reference, this is not
+usually a problem, unless an example happens to be defined with the
+corresponding label.) You can change this default by modifying the
+value of `MAX_SUB_EXAMPLE_LETTERS`.
+
+Occasionally, you may want to explicitly specify that something which
+looks like a reference to an example is in fact not. (For example, if
+you have the word 'I' in parantheses in a gloss, and an example
+labeled `(I)`) You can prevent a sequence of capital letters in
+parentheses from being interpreted as a reference to an example by
+insering a bang: `(!FOO)`. A bang in parentheses can be produced using
+`(!!)`. It should rarely if ever be necessary to use bangs in the
+manner -- the need arises only if you happen to have defined an
+example with the corresponding label.
 
 References to non-existent examples are ignored. This can happen
 sometimes if you put acronyms in parantheses (e.g. "The Uniformity of

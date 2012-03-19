@@ -6,6 +6,8 @@ import xml.etree.ElementTree
 import zipfile
 import tempfile
 
+MAX_SUB_EXAMPLE_LETTERS = 1
+
 # From http://www.daniweb.com/software-development/python/code/216865
 def int2roman(number):
     numerals = { 1 : "i", 4 : "iv", 5 : "v", 9 : "ix", 10 : "x", 40 : "xl", 
@@ -79,22 +81,25 @@ def search_and_replace(root, current_number, current_rm_number, current_heading_
     get_heading_styles(root)
     search_and_replace_(root, current_number, current_rm_number, current_heading_number)
 
-_labre = re.compile(r"\((#?[A-Z]+)\)\t")
+_labre = re.compile(r"\((!?)(#?[A-Z]+)\)\t")
 def search_and_replace_paragraph(elem, start_number, start_rm_number):
     text, links = flatten(elem)
     for match in (re.finditer(_labre, text) or []):
-        if mapping.has_key(match.group(1).lstrip('#')):
-            sys.stderr.write("WARNING: Label (%s) is multiply defined.\n" % match.group(1).lstrip('#'))
-
-        if match.group(1).startswith('#'):
-            rm = int2roman(start_rm_number)
-            mapping[match.group(1)[1:]] = rm
-            replace_in_linked_string(text, match.start(1), match.end(1), links, rm)
-            start_rm_number += 1
+        if match.group(1): # It's escaped; delete the '!' and move on.
+            replace_in_linked_string(text, match.start(1), match.end(1), links, "")
         else:
-            mapping[match.group(1)] = start_number
-            replace_in_linked_string(text, match.start(1), match.end(1), links, str(start_number))
-            start_number += 1
+            if mapping.has_key(match.group(2).lstrip('#')):
+                sys.stderr.write("WARNING: Label (%s) is multiply defined.\n" % match.group(2).lstrip('#'))
+
+            if match.group(2).startswith('#'):
+                rm = int2roman(start_rm_number)
+                mapping[match.group(2)[1:]] = rm
+                replace_in_linked_string(text, match.start(2), match.end(2), links, rm)
+                start_rm_number += 1
+            else:
+                mapping[match.group(2)] = start_number
+                replace_in_linked_string(text, match.start(2), match.end(2), links, str(start_number))
+                start_number += 1
     return start_number, start_rm_number
 
 def str_heading_number(l):
@@ -137,21 +142,24 @@ def search_and_replace2(current):
         else:
             search_and_replace2(child)
 
-_labre2 = re.compile(r"\(([A-Z]+)(?:[a-z]*)(?:-(?:[a-z]+)|(?:([A-Z]+)(?:[a-z]*)))?\)[^\t]")
+_labre2 = r"\((!?)([A-Z]+)(?:(?:[a-z]{1,%i}(?:-[a-z]{1,%i})?)|(?:-([A-Z]+)))\)[^\t]" % ((MAX_SUB_EXAMPLE_LETTERS,)*2)
 _headre2 = re.compile(r"\$([A-Z]+)")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
     for match in (re.finditer(_labre2, text) or []):
-        if not mapping.has_key(match.group(1)):
-            sys.stderr.write("WARNING: Bad reference to (%s)\n" % match.group(1))
+        if match.group(1): # It's escaped; delete the '!' and move on.
+            replace_in_linked_string(text, match.start(1), match.end(1), links, "")
         else:
-            replace_in_linked_string(text, match.start(1), match.end(1), links, str(mapping[match.group(1)]))
-
-        if match.group(2):
             if not mapping.has_key(match.group(2)):
                 sys.stderr.write("WARNING: Bad reference to (%s)\n" % match.group(2))
             else:
                 replace_in_linked_string(text, match.start(2), match.end(2), links, str(mapping[match.group(2)]))
+
+                if match.group(3):
+                    if not mapping.has_key(match.group(3)):
+                        sys.stderr.write("WARNING: Bad reference to (%s)\n" % match.group(3))
+                    else:
+                        replace_in_linked_string(text, match.start(3), match.end(3), links, str(mapping[match.group(3)]))
 
     text, links = flatten(elem)
     for match in (re.finditer(_headre2, text) or []):
