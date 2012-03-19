@@ -49,6 +49,11 @@ usually a problem, unless an example happens to be defined with the
 corresponding label.) You can change this default by modifying the
 value of `MAX_SUB_EXAMPLE_LETTERS`.
 
+References to non-existent examples are ignored. This can happen
+sometimes if you put acronyms in parantheses (e.g. "The Uniformity of
+Theta Assignment Hypothesis (UTAH)").  In this case, so long as there
+is no example labeled UTAH, nothing will go wrong.
+
 Occasionally, you may want to explicitly specify that something which
 looks like a reference to an example is in fact not. (For example, if
 you have the word 'I' in parantheses in a gloss, and an example
@@ -58,11 +63,6 @@ insering a bang: `(!FOO)`. The output `(!FOO)` can be produced using
 `(!!FOO)`; `(!)` will come out unaltered. It should rarely if ever be
 necessary to use bangs in the manner -- the need arises only if you
 happen to have defined an example with the corresponding label.
-
-References to non-existent examples are ignored. This can happen
-sometimes if you put acronyms in parantheses (e.g. "The Uniformity of
-Theta Assignment Hypothesis (UTAH)").  In this case, so long as there
-is no example labeled UTAH, nothing will go wrong.
 
 Headings and sub-headings are automatically numbered in the output. If
 you want to refer back to a section, introduce the heading with a
