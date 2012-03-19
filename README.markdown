@@ -54,10 +54,10 @@ looks like a reference to an example is in fact not. (For example, if
 you have the word 'I' in parantheses in a gloss, and an example
 labeled `(I)`) You can prevent a sequence of capital letters in
 parentheses from being interpreted as a reference to an example by
-insering a bang: `(!FOO)`. A bang in parentheses can be produced using
-`(!!)`. It should rarely if ever be necessary to use bangs in the
-manner -- the need arises only if you happen to have defined an
-example with the corresponding label.
+insering a bang: `(!FOO)`. The output `(!FOO)` can be produced using
+`(!!FOO)`; `(!)` will come out unaltered. It should rarely if ever be
+necessary to use bangs in the manner -- the need arises only if you
+happen to have defined an example with the corresponding label.
 
 References to non-existent examples are ignored. This can happen
 sometimes if you put acronyms in parantheses (e.g. "The Uniformity of
