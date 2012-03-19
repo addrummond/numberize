@@ -143,7 +143,7 @@ def search_and_replace2(current):
             search_and_replace2(child)
 
 _labre2 = r"\((!?)([A-Z]+)(?:(?:[a-z]{1,%i}(?:-[a-z]{1,%i})?)|(?:-([A-Z]+)))\)[^\t]" % ((MAX_SUB_EXAMPLE_LETTERS,)*2)
-_headre2 = re.compile(r"\$([A-Z]+)")
+_headre2 = re.compile(r"(\$+)([A-Z]+)")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
     for match in (re.finditer(_labre2, text) or []):
@@ -163,12 +163,15 @@ def search_and_replace_paragraph2(elem):
 
     text, links = flatten(elem)
     for match in (re.finditer(_headre2, text) or []):
-        sl = [x for x in links.keys() if x != 'current_i']
-        sl.sort()
-        if not heading_numbers.has_key(match.group(1)):
-            sys.stderr.write("WARNING: Bad reference to $%s\n" % match.group(1))
+        if len(match.group(1)) > 1: # It's escaped; strip a '$' and move on.
+            replace_in_linked_string(text, match.start(1), match.end(1), match.group(1)[1:])
         else:
-            replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(1)]))
+            sl = [x for x in links.keys() if x != 'current_i']
+            sl.sort()
+            if not heading_numbers.has_key(match.group(1)):
+                sys.stderr.write("WARNING: Bad reference to $%s\n" % match.group(1))
+            else:
+                replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(1)]))
 
 def flatten_(elem, text, links):
     if strip_prefix(elem.tag) == "span" and not (len(list(elem)) > 0 and strip_prefix(elem[0].tag) == "note"):
