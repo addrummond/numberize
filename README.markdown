@@ -38,7 +38,7 @@ following sort:
 
 You can refer either to `(LMN)`, `(LMNa)` or `(LMNb)`. Note that the
 script is not aware of the sub-examples (you could just as well write
-`(LMNz)`, which would come out as `(2z)` if `(LMN)` is the second
+`(LMNz)`, which would come out as `(2z)` if `(LMN)` were the second
 arabic-numbered example in the document).
 You can also write things like `(ABc-d)`, which come out as `(20c-d)`.
 
