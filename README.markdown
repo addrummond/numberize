@@ -39,8 +39,9 @@ following sort:
 You can refer either to `(LMN)`, `(LMNa)` or `(LMNb)`. Note that the
 script is not aware of the sub-examples (you could just as well write
 `(LMNz)`, which would come out as `(2z)` if `(LMN)` were the second
-arabic-numbered example in the document).
-You can also write things like `(ABc-d)`, which come out as `(20c-d)`.
+arabic-numbered example in the document).  You can also write things
+like `(ABc-d)`, which comes out as `(20c-d)`, or (ABa/e), which comes
+out as `(20a/e)`.
 
 To avoid bracketed words being mistaken for references to examples,
 the script assumes that no subexamples are labeled with more than one
@@ -71,7 +72,7 @@ sequence of upper case latters followed by a period:
     ABC. My heading
 
 You can then get the number of this heading using `$ABC`. If you do
-not want a heading to be numbered, precede it with a `*':
+not want a heading to be numbered, precede it with a `*`:
 
     *My heading
 
