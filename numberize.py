@@ -176,11 +176,9 @@ def search_and_replace_paragraph2(elem):
 
 def number_footnotes(elem, cite_count=1, fn_count=1):
     if strip_prefix(elem.tag) == "note-citation":
-        print "REPLACING!"
         elem.text = str(cite_count)
         cite_count += 1
     elif strip_prefix(elem.tag) == "note":
-        print "REPLACING! (2)"
         elem.attrib[TEXTPREF + 'id'] = "ftn%i" % fn_count
         fn_count += 1
 
