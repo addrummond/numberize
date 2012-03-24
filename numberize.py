@@ -7,6 +7,7 @@ import zipfile
 import tempfile
 
 MAX_SUB_EXAMPLE_LETTERS = 1
+FIX_FOOTNOTE_NUMBERING = True
 
 # From http://www.daniweb.com/software-development/python/code/216865
 def int2roman(number):
@@ -173,6 +174,20 @@ def search_and_replace_paragraph2(elem):
             else:
                 replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(2)]))
 
+def number_footnotes(elem, cite_count=1, fn_count=1):
+    if strip_prefix(elem.tag) == "note-citation":
+        print "REPLACING!"
+        elem.text = str(cite_count)
+        cite_count += 1
+    elif strip_prefix(elem.tag) == "note":
+        print "REPLACING! (2)"
+        elem.attrib[TEXTPREF + 'id'] = "ftn%i" % fn_count
+        fn_count += 1
+
+    for c in elem:
+        cite_count, fn_count = number_footnotes(c, cite_count, fn_count)
+    return cite_count, fn_count
+
 def flatten_(elem, text, links):
     if strip_prefix(elem.tag) == "span" and not (len(list(elem)) > 0 and strip_prefix(elem[0].tag) == "note"):
         if elem.text:
@@ -240,6 +255,8 @@ with zipfile.ZipFile(sys.argv[1], 'r') as odt:
         root = doc.getroot()
         search_and_replace(root, 1, 1, [0])
         search_and_replace2(root)
+        if FIX_FOOTNOTE_NUMBERING:
+            number_footnotes(root, 1)
 
         with zipfile.ZipFile(sys.argv[2] or "out.odt", 'w') as newone:
             for n in odt.namelist():
