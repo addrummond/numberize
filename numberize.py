@@ -142,7 +142,7 @@ def search_and_replace2(current):
         else:
             search_and_replace2(child)
 
-_labre2 = r"\((!?)([A-Z]+)(?:(?:[a-z]{1,%i}(?:[-/][a-z]{1,%i})?)|(?:[-/]([A-Z]+)))\)[^\t]" % ((MAX_SUB_EXAMPLE_LETTERS,)*2)
+_labre2 = r"\((!?)([A-Z]+)(?:(?:[a-z]{0,%i}(?:[-/][a-z]{0,%i})?)|(?:[-/]([A-Z]+)))\)[^\t]" % ((MAX_SUB_EXAMPLE_LETTERS,)*2)
 _headre2 = re.compile(r"(\$+)([A-Z]+)")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
