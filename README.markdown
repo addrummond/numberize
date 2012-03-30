@@ -76,5 +76,5 @@ not want a heading to be numbered, precede it with a `*`:
 
     *My heading
 
-The `*' is stripped in the output and the heading is left
+The `*` is stripped in the output and the heading is left
 unnumbered. To produce the literal output `$ABC`, use `$$ABC'.
