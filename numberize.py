@@ -227,12 +227,15 @@ def flatten_(elem, text, links):
         for child in elem:
             pr = strip_prefix(child.tag)
             if child.tail or pr == "tab" or pr == "s": # Regex matching is sensitive to tabs so must include these.
+                add = 0
                 if pr == "tab":
+                    add = 1
                     text.write('\t')
                 elif pr == "s":
+                    add = 1
                     text.write(' ')
                 text.write(child.tail or "")
-                l = len(child.tail or "") + (pr == "tab" and 1 or 0)
+                l = len(child.tail or "") + add
                 links[(links['current_i'], links['current_i'] + l)] = dict(type="tail", elem=child)
                 links['current_i'] += l
     else:
