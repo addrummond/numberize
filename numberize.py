@@ -84,17 +84,21 @@ def search_and_replace(root, current_number, current_rm_number, current_heading_
     get_heading_styles(root)
     search_and_replace_(root, current_number, current_rm_number, current_heading_number, current_fn_number)
 
-_fnre = re.compile(r"^\s*([A-Z]+)\..*")
+_fnre = re.compile(r"^\s*(!?)([A-Z]+)(\.\s*).*")
 def frisk_for_footnotes(elem, current_fn_number):
     if strip_prefix(elem.tag) == "note":
         text, links = flatten(elem)
         m = re.match(_fnre, text)
         if m:
-            if fn_numbers.has_key(m.group(1)):
-                sys.stderr.write("WARNING: Footnote label '%s' is multiply defined.\n" % m.group(1))
-            fn_numbers[m.group(1)] = current_fn_number
-            current_fn_number += 1
-            replace_in_linked_string(text, m.start(), m.end(), links, "")
+            if len(m.group(1)) > 0: # It's escaped; delete the '!' and move on.
+                replace_in_linked_string(text, m.start(1), m.end(1), links, "")
+            else:
+                if fn_numbers.has_key(m.group(2)):
+                    sys.stderr.write("WARNING: Footnote label '%s' is multiply defined.\n" % m.group(2))
+                fn_numbers[m.group(2)] = current_fn_number
+                replace_in_linked_string(text, m.start(), m.end(3), links, "")
+
+        current_fn_number += 1
     else:
         for child in elem:
             current_fn_number = frisk_for_footnotes(child, current_fn_number)
