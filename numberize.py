@@ -197,7 +197,7 @@ def search_and_replace_paragraph2(elem):
 
     text, links = flatten(elem)
     for match in (re.finditer(_fnre2, text) or []):
-        if len(match.group(1)) > 1: # It's espaced; strip a '^' and move on.
+        if len(match.group(1)) > 1: # It's escaped; strip a '^' and move on.
             replace_in_linked_string(text, match.start(1), match.start(1)+1, "")
         else:
             if not fn_numbers.has_key(match.group(2)):
