@@ -44,10 +44,6 @@ for x in [("office", "urn:oasis:names:tc:opendocument:xmlns:office:1.0"),
 
 assert sys.argv[1]
 
-_tagre = re.compile(r"(?:\{[^}]*\})?(.*)")
-def strip_prefix(tagname):
-    return re.match(_tagre, tagname).group(1)
-
 def permissible_label_char(c):
     return c.isupper()
 
@@ -58,24 +54,39 @@ fn_numbers = dict() # E.g. "XX" -> 7
 
 STYLEPREF = "{urn:oasis:names:tc:opendocument:xmlns:style:1.0}"
 TEXTPREF = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
+OFFICEPREF = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
+
+T_AUTOMATIC_STYLES = OFFICEPREF + 'automatic-styles'
+T_FAMILY = STYLEPREF + 'family'
+T_PARENT_STYLE_NAME = STYLEPREF + 'parent-style-name'
+T_NAME = STYLEPREF + 'name'
+T_P = TEXTPREF + 'p'
+T_H = TEXTPREF + 'h'
+T_STYLE_NAME = TEXTPREF + 'style-name'
+T_NOTE = TEXTPREF + 'note'
+T_NOTE_CITATION = TEXTPREF + 'note-citation'
+T_TAB = TEXTPREF + 'tab'
+T_SPAN = TEXTPREF + 'span'
+T_S = TEXTPREF + 's'
+
 _hre = re.compile(r"_(\d+)$")
 def get_heading_styles(root):
     for elem in root:
-        if strip_prefix(elem.tag) == "automatic-styles":
+        if elem.tag == T_AUTOMATIC_STYLES:
             for c in elem:
-                if c.attrib.has_key(STYLEPREF + 'family') and c.attrib[STYLEPREF + 'family'] == 'paragraph':
-                    s = c.attrib[STYLEPREF + 'parent-style-name']
+                if c.attrib.has_key(T_FAMILY) and c.attrib[T_FAMILY] == 'paragraph':
+                    s = c.attrib[T_PARENT_STYLE_NAME]
                     if s.startswith("Heading_"):
                         m = re.search(_hre, s)
                         if m:
-                            heading_style_to_level[c.attrib[STYLEPREF + 'name']] = int(m.group(1))
+                            heading_style_to_level[c.attrib[T_NAME]] = int(m.group(1))
 
 def search_and_replace_(current, current_number, current_rm_number, current_heading_number, current_fn_number):
     for child in current:
-        if strip_prefix(child.tag) == "p":
+        if child.tag == T_P:
             current_number, current_rm_number, current_fn_number = \
                 search_and_replace_paragraph(child, current_number, current_rm_number, current_fn_number)
-        elif strip_prefix(child.tag) == "h" and heading_style_to_level[child.attrib[TEXTPREF + "style-name"]] > 1:
+        elif child.tag == T_H and heading_style_to_level[child.attrib[T_STYLE_NAME]] > 1:
             current_heading_number = search_and_replace_heading(child, current_heading_number)
         else:
             search_and_replace_(child, current_number, current_rm_number, current_heading_number, current_fn_number)
@@ -86,7 +97,7 @@ def search_and_replace(root, current_number, current_rm_number, current_heading_
 
 _fnre = re.compile(r"^\s*(!?)([A-Z]+)(\.\s*).*")
 def frisk_for_footnotes(elem, current_fn_number):
-    if strip_prefix(elem.tag) == "note":
+    if elem.tag == T_NOTE:
         text, links = flatten(elem)
         m = re.match(_fnre, text)
         if m:
@@ -162,7 +173,7 @@ def search_and_replace_heading(elem, start_number):
 
 def search_and_replace2(current):
     for child in current:
-        if strip_prefix(child.tag) == "p":
+        if child.tag == T_P:
             search_and_replace_paragraph2(child)
         else:
             search_and_replace2(child)
@@ -210,10 +221,10 @@ def search_and_replace_paragraph2(elem):
                 replace_in_linked_string(text, match.start(), match.end(), links, str(fn_numbers[match.group(2)]))
 
 def number_footnotes(elem, cite_count=1, fn_count=1):
-    if strip_prefix(elem.tag) == "note-citation":
+    if elem.tag == T_NOTE_CITATION:
         elem.text = str(cite_count)
         cite_count += 1
-    elif strip_prefix(elem.tag) == "note":
+    elif elem.tag == T_NOTE:
         elem.attrib[TEXTPREF + 'id'] = "ftn%i" % fn_count
         fn_count += 1
 
@@ -222,20 +233,19 @@ def number_footnotes(elem, cite_count=1, fn_count=1):
     return cite_count, fn_count
 
 def flatten_(elem, text, links):
-    if strip_prefix(elem.tag) == "span" and not (len(list(elem)) > 0 and strip_prefix(elem[0].tag) == "note"):
+    if elem.tag == T_SPAN and not (len(list(elem)) > 0 and elem[0].tag == T_NOTE):
         if elem.text:
             text.write(elem.text)
             links[(links['current_i'], links['current_i']+len(elem.text))] = dict(type="text", elem=elem)
             links['current_i'] += len(elem.text)
 
         for child in elem:
-            pr = strip_prefix(child.tag)
-            if child.tail or pr == "tab" or pr == "s": # Regex matching is sensitive to tabs so must include these.
+            if child.tail or child.tag == T_TAB or child.tag == T_S: # Regex matching is sensitive to tabs so must include these.
                 add = 0
-                if pr == "tab":
+                if child.tag == T_TAB:
                     add = 1
                     text.write('\t')
-                elif pr == "s":
+                elif child.tag == T_S:
                     add = 1
                     text.write(' ')
                 text.write(child.tail or "")
