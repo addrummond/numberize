@@ -236,7 +236,7 @@ def flatten_(elem, text, links):
                     text.write(' ')
                 text.write(child.tail or "")
                 l = len(child.tail or "") + add
-                links[(links['current_i'], links['current_i'] + l)] = dict(type="tail", elem=child)
+                links[(links['current_i'] + add, links['current_i'] + l)] = dict(type="tail", elem=child)
                 links['current_i'] += l
     else:
         for c in elem:
@@ -266,7 +266,6 @@ def replace_in_linked_string(string, start, end, links, replacement):
         setattr(links[k]['elem'], links[k]['type'], "")
 #        sys.stderr.write("Setting %i to empty\n" % rks.index(k))
 
-    # This hasn't ever happened, so this code isn't actually tested.
     if len(rks) >= 2:
         into2 = getattr(links[rks[-1]]['elem'], links[rks[-1]]['type']) or ""
         new = into2[end - rks[-1][0]:]
