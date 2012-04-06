@@ -95,14 +95,14 @@ def search_and_replace(root, current_number, current_rm_number, current_heading_
     get_heading_styles(root)
     search_and_replace_(root, current_number, current_rm_number, current_heading_number, current_fn_number)
 
-_fnre = re.compile(r"^\s*(!?)([A-Z]+)(\.\s*).*")
+_fnre = re.compile(r"^\s*(!*)([A-Z]+)(\.\s*).*")
 def frisk_for_footnotes(elem, current_fn_number):
     if elem.tag == T_NOTE:
         text, links = flatten(elem)
         m = re.match(_fnre, text)
         if m:
-            if len(m.group(1)) > 0: # It's escaped; delete the '!' and move on.
-                replace_in_linked_string(text, m.start(1), m.end(1), links, "")
+            if m.group(1): # It's escaped; delete a '!' and move on.
+                replace_in_linked_string(text, m.start(1), m.end(1), links, m.group(1)[1:])
             else:
                 if fn_numbers.has_key(m.group(2)):
                     sys.stderr.write("WARNING: Footnote label '%s' is multiply defined.\n" % m.group(2))
@@ -115,14 +115,14 @@ def frisk_for_footnotes(elem, current_fn_number):
             current_fn_number = frisk_for_footnotes(child, current_fn_number)
     return current_fn_number
 
-_labre = re.compile(r"\((!?)(#?[A-Z]+)\)\t")
+_labre = re.compile(r"\((!*)(#?[A-Z]+)\)\t")
 def search_and_replace_paragraph(elem, start_number, start_rm_number, current_fn_number):
     current_fn_number = frisk_for_footnotes(elem, current_fn_number)
 
     text, links = flatten(elem)
     for match in (re.finditer(_labre, text) or []):
-        if match.group(1): # It's escaped; delete the '!' and move on.
-            replace_in_linked_string(text, match.start(1), match.end(1), links, "")
+        if match.group(1): # It's escaped; delete a '!' and move on.
+            replace_in_linked_string(text, match.start(1), match.end(1), links, match.group(1)[1:])
         else:
             if mapping.has_key(match.group(2).lstrip('#')):
                 sys.stderr.write("WARNING: Label (%s) is multiply defined.\n" % match.group(2).lstrip('#'))

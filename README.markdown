@@ -78,3 +78,20 @@ not want a heading to be numbered, precede it with a `*`:
 
 The `*` is stripped in the output and the heading is left
 unnumbered. To produce the literal output `$ABC`, use `$$ABC`.
+
+Footnotes can be numbered for future reference. Currently, the script
+assumes that footnotes will be numbered on a per-document basis
+(rather than per page or per chapter). To number a footnote, use a
+sequence of upper case letters followed by a period as the first
+non-whitespace characters in the footnote. E.g.:
+
+    FOO. My footnote which is labeled FOO.
+
+If you want to produce the literal output `FOO.` at the beginning of
+the footnote, escape using `!`:
+
+    !FOO. My unlabeled footnote which begins "FOO".
+
+As before, you can use `!!FOO.` to obtain the literal output `!FOO.`.
+To get the number of a labeled footnote, use `^LABEL` (escaping using
+`^^LABEL`).
