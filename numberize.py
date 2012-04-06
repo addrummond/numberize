@@ -6,7 +6,7 @@ import xml.etree.ElementTree
 import zipfile
 import tempfile
 
-MAX_SUB_EXAMPLE_LETTERS = 1
+MAX_SUB_EXAMPLE_LETTERS = 3
 FIX_FOOTNOTE_NUMBERING = True
 
 # From http://www.daniweb.com/software-development/python/code/216865
@@ -54,6 +54,7 @@ def permissible_label_char(c):
 heading_style_to_level = dict() # E.g. P60 -> 3
 mapping = dict()
 heading_numbers = dict() # E.g. "XX" -> [1,4,2] (= 1.4.2)
+fn_numbers = dict() # E.g. "XX" -> 7
 
 STYLEPREF = "{urn:oasis:names:tc:opendocument:xmlns:style:1.0}"
 TEXTPREF = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
@@ -69,21 +70,40 @@ def get_heading_styles(root):
                         if m:
                             heading_style_to_level[c.attrib[STYLEPREF + 'name']] = int(m.group(1))
 
-def search_and_replace_(current, current_number, current_rm_number, current_heading_number):
+def search_and_replace_(current, current_number, current_rm_number, current_heading_number, current_fn_number):
     for child in current:
         if strip_prefix(child.tag) == "p":
-            current_number, current_rm_number = search_and_replace_paragraph(child, current_number, current_rm_number)
+            current_number, current_rm_number, current_fn_number = \
+                search_and_replace_paragraph(child, current_number, current_rm_number, current_fn_number)
         elif strip_prefix(child.tag) == "h" and heading_style_to_level[child.attrib[TEXTPREF + "style-name"]] > 1:
             current_heading_number = search_and_replace_heading(child, current_heading_number)
         else:
-            search_and_replace_(child, current_number, current_rm_number, current_heading_number)
+            search_and_replace_(child, current_number, current_rm_number, current_heading_number, current_fn_number)
 
-def search_and_replace(root, current_number, current_rm_number, current_heading_number):
+def search_and_replace(root, current_number, current_rm_number, current_heading_number, current_fn_number):
     get_heading_styles(root)
-    search_and_replace_(root, current_number, current_rm_number, current_heading_number)
+    search_and_replace_(root, current_number, current_rm_number, current_heading_number, current_fn_number)
+
+_fnre = re.compile(r"^\s*([A-Z]+)\..*")
+def frisk_for_footnotes(elem, current_fn_number):
+    if strip_prefix(elem.tag) == "note":
+        text, links = flatten(elem)
+        m = re.match(_fnre, text)
+        if m:
+            if fn_numbers.has_key(m.group(1)):
+                sys.stderr.write("WARNING: Footnote label '%s' is multiply defined.\n" % m.group(1))
+            fn_numbers[m.group(1)] = current_fn_number
+            current_fn_number += 1
+            replace_in_linked_string(text, m.start(), m.end(), links, "")
+    else:
+        for child in elem:
+            current_fn_number = frisk_for_footnotes(child, current_fn_number)
+    return current_fn_number
 
 _labre = re.compile(r"\((!?)(#?[A-Z]+)\)\t")
-def search_and_replace_paragraph(elem, start_number, start_rm_number):
+def search_and_replace_paragraph(elem, start_number, start_rm_number, current_fn_number):
+    current_fn_number = frisk_for_footnotes(elem, current_fn_number)
+
     text, links = flatten(elem)
     for match in (re.finditer(_labre, text) or []):
         if match.group(1): # It's escaped; delete the '!' and move on.
@@ -101,7 +121,7 @@ def search_and_replace_paragraph(elem, start_number, start_rm_number):
                 mapping[match.group(2)] = start_number
                 replace_in_linked_string(text, match.start(2), match.end(2), links, str(start_number))
                 start_number += 1
-    return start_number, start_rm_number
+    return start_number, start_rm_number, current_fn_number
 
 def str_heading_number(l):
     return '.'.join(map(str, l))
@@ -145,6 +165,7 @@ def search_and_replace2(current):
 
 _labre2 = r"\((!?)([A-Z]+)(?:(?:[a-z]{0,%i}(?:[-/][a-z]{0,%i})?)|(?:[-/]([A-Z]+)))\)[^\t]" % ((MAX_SUB_EXAMPLE_LETTERS,)*2)
 _headre2 = re.compile(r"(\$+)([A-Z]+)")
+_fnre2 = re.compile(r"(\^+)([A-Z]+)")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
     for match in (re.finditer(_labre2, text) or []):
@@ -170,9 +191,19 @@ def search_and_replace_paragraph2(elem):
             sl = [x for x in links.keys() if x != 'current_i']
             sl.sort()
             if not heading_numbers.has_key(match.group(2)):
-                sys.stderr.write("WARNING: Bad reference to $%s\n" % match.group(1))
+                sys.stderr.write("WARNING: Bad reference to heading $%s\n" % match.group(2))
             else:
                 replace_in_linked_string(text, match.start(), match.end(), links, str_heading_number(heading_numbers[match.group(2)]))
+
+    text, links = flatten(elem)
+    for match in (re.finditer(_fnre2, text) or []):
+        if len(match.group(1)) > 1: # It's espaced; strip a '^' and move on.
+            replace_in_linked_string(text, match.start(1), match.start(1)+1, "")
+        else:
+            if not fn_numbers.has_key(match.group(2)):
+                sys.stderr.write("WARNING: Bad reference to footnote ^%s\n" % match.group(2))
+            else:
+                replace_in_linked_string(text, match.start(), match.end(), links, str(fn_numbers[match.group(2)]))
 
 def number_footnotes(elem, cite_count=1, fn_count=1):
     if strip_prefix(elem.tag) == "note-citation":
@@ -195,9 +226,11 @@ def flatten_(elem, text, links):
 
         for child in elem:
             pr = strip_prefix(child.tag)
-            if child.tail or pr == "tab": # Regex matching is sensitive to tabs so must include these.
+            if child.tail or pr == "tab" or pr == "s": # Regex matching is sensitive to tabs so must include these.
                 if pr == "tab":
                     text.write('\t')
+                elif pr == "s":
+                    text.write(' ')
                 text.write(child.tail or "")
                 l = len(child.tail or "") + (pr == "tab" and 1 or 0)
                 links[(links['current_i'], links['current_i'] + l)] = dict(type="tail", elem=child)
@@ -251,7 +284,7 @@ with zipfile.ZipFile(sys.argv[1], 'r') as odt:
     with odt.open('content.xml', 'r') as content:
         doc = xml.etree.ElementTree.parse(content)
         root = doc.getroot()
-        search_and_replace(root, 1, 1, [0])
+        search_and_replace(root, 1, 1, [0], 1)
         search_and_replace2(root)
         if FIX_FOOTNOTE_NUMBERING:
             number_footnotes(root, 1)
