@@ -5,6 +5,9 @@ import StringIO
 import xml.etree.ElementTree
 import zipfile
 import tempfile
+import time
+
+now = time.gmtime()
 
 MAX_SUB_EXAMPLE_LETTERS = 3
 FIX_FOOTNOTE_NUMBERING = True
@@ -181,6 +184,7 @@ def search_and_replace2(current):
 _labre2 = r"\((!?)([A-Z]+)(?:(?:[a-z]{0,%i}(?:[-/][a-z]{0,%i})?)|(?:[-/]([A-Z]+)))\)[^\t]" % ((MAX_SUB_EXAMPLE_LETTERS,)*2)
 _headre2 = re.compile(r"(\$+)([A-Z]+)")
 _fnre2 = re.compile(r"(\^+)([A-Z]+)")
+_replre = re.compile(r"%\[([a-zA-z]+)\]")
 def search_and_replace_paragraph2(elem):
     text, links = flatten(elem)
     for match in (re.finditer(_labre2, text) or []):
@@ -219,6 +223,19 @@ def search_and_replace_paragraph2(elem):
                 sys.stderr.write("WARNING: Bad reference to footnote ^%s\n" % match.group(2))
             else:
                 replace_in_linked_string(text, match.start(), match.end(), links, str(fn_numbers[match.group(2)]))
+
+    text, links = flatten(elem)
+    for match in (re.finditer(_replre, text) or []):
+        w = match.group(1).upper()
+        r = ""
+        repl = dict(DAY=lambda: time.strftime("%d"), DAYNAME=lambda: time.strftime("%A"),
+                    MONTH=lambda: time.strftime("%m"), MONTHNAME=lambda: time.strftime("%B"),
+                    YEAR=lambda: time.strftime("%Y"))
+        if repl.has_key(w):
+            r = repl[w]()
+        else:
+            sys.stderr.write("WARNING: Unrecognized replacement '%s'\n" % w)
+        replace_in_linked_string(text, match.start(), match.end(), links, r)
 
 def number_footnotes(elem, cite_count=1, fn_count=1):
     if elem.tag == T_NOTE_CITATION:
