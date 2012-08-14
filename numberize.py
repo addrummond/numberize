@@ -152,17 +152,22 @@ def search_and_replace_heading(elem, start_number):
     level = heading_style_to_level[elem.attrib[TEXTPREF + "style-name"]]
 
     if level - 1 == len(start_number): # Non-embedded heading
-        start_number[-1] += 1
+        pass
     elif level - 1 < len(start_number):
         for _ in xrange(level - 1, len(start_number)): start_number.pop()
-        start_number[-1] += 1
     elif level - 1 > len(start_number):
-        start_number.append(1)
+        start_number.append(0)
+
+    # Update's start number appropriately if we find we're dealing with an unnumbered heading.
+    def update_start_number():
+        if level - 1 <= len(start_number):
+            start_number[-1] += 1        
 
     match = re.match(_headre, text)
     if match:
         if heading_numbers.has_key(match.group(1)):
             sys.stderr.write("WARNING: Heading label '%s' is multiply defined.\n" % match.group(1))
+        update_start_number()
         heading_numbers[match.group(1)] = map(lambda x: x, start_number)
         replace_in_linked_string(text, match.start(1), match.end(1), links, str_heading_number(start_number))
     else:
@@ -171,7 +176,10 @@ def search_and_replace_heading(elem, start_number):
             # An unnumbered heading -- just remove the '*' and any whitespace following it.
             replace_in_linked_string(text, 0, match2.end(1), links, "")
         else:
+            # It's a numbered heading without a label.
+            update_start_number()
             replace_in_linked_string(text, 0, 1, links, str_heading_number(start_number) + '. ' + (text and text[0] or ''))
+
     return start_number
 
 def search_and_replace2(current):
