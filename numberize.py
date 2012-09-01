@@ -89,7 +89,7 @@ def search_and_replace_(current, current_number, current_rm_number, current_head
         if child.tag == T_P:
             current_number, current_rm_number, current_fn_number = \
                 search_and_replace_paragraph(child, current_number, current_rm_number, current_fn_number)
-        elif child.tag == T_H and heading_style_to_level[child.attrib[T_STYLE_NAME]] > 1:
+        elif child.tag == T_H: #and heading_style_to_level[child.attrib[T_STYLE_NAME]] > 1:
             current_heading_number = search_and_replace_heading(child, current_heading_number)
         else:
             search_and_replace_(child, current_number, current_rm_number, current_heading_number, current_fn_number)
@@ -151,16 +151,16 @@ def search_and_replace_heading(elem, start_number):
 
     level = heading_style_to_level[elem.attrib[TEXTPREF + "style-name"]]
 
-    if level - 1 == len(start_number): # Non-embedded heading
+    if level == len(start_number): # Non-embedded heading
         pass
-    elif level - 1 < len(start_number):
-        for _ in xrange(level - 1, len(start_number)): start_number.pop()
-    elif level - 1 > len(start_number):
+    elif level < len(start_number):
+        for _ in xrange(level, len(start_number)): start_number.pop()
+    elif level > len(start_number):
         start_number.append(0)
 
     # Update's start number appropriately if we find we're dealing with an unnumbered heading.
     def update_start_number():
-        if level - 1 <= len(start_number):
+        if level <= len(start_number):
             start_number[-1] += 1        
 
     match = re.match(_headre, text)
