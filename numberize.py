@@ -158,7 +158,7 @@ def search_and_replace_heading(elem, start_number):
     elif level > len(start_number):
         start_number.append(0)
 
-    # Update's start number appropriately if we find we're dealing with an unnumbered heading.
+    # Updates start number appropriately if we find we're dealing with an unnumbered heading.
     def update_start_number():
         if level <= len(start_number):
             start_number[-1] += 1        
