@@ -14,7 +14,7 @@ This should work with the standard OS X Python installation (so long
 as the Python version is ≥ 2.5).
 
 To introduce a numbered example, write a series of upper case letters
-enclosed in parantheses, followed by a tab:
+enclosed in parantheses, followed either by a tab or by two or more spaces:
 
     (XYZ)   My example...
 
