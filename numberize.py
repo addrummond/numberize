@@ -268,26 +268,23 @@ def flatten_(elem, text, links):
             if child.tail or child.tag == T_TAB or child.tag == T_S: # Regex matching is sensitive to tabs so must include these.
                 add = 0
                 
-                count = 1
-                if child.attrib.has_key(TEXTPREF + 'c'):
-                    count = child.attrib[TEXTPREF + 'c']
-                try:
-                    count = int(count)
-                except:
-                    sys.stderr.write("ERROR: Bad value for 'c' attribute")
-                    sys.exit(1)
+                if child.tag == T_TAB or child.tag == T_S:
+                    add = 1
+                    if child.attrib.has_key(TEXTPREF + 'c'):
+                        add = child.attrib[TEXTPREF + 'c']
+                        try:
+                            add = int(add)
+                        except:
+                            sys.stderr.write("ERROR: Bad value for 'c' attribute")
+                            sys.exit(1)
+                    text.write((child.tag == T_TAB and '\t' or ' ') * add)
 
-                if child.tag == T_TAB:
-                    add = count
-                    text.write('\t' * count)
-                elif child.tag == T_S:
-                    add = count
-                    text.write(' ' * count)
-                text.write(child.tail or "")
-                l = len(child.tail or "") + add
-                if l > 0:
-                    links[(links['current_i'], links['current_i'] + l)] = dict(type="tail", elem=child)
-                    links['current_i'] += l
+                links['current_i'] += add
+
+                if child.tail:
+                    text.write(child.tail)
+                    links[(links['current_i'], links['current_i'] + len(child.tail))] = dict(type="tail", elem=child)
+                    links['current_i'] += len(child.tail)
     else:
         for c in elem:
             current_i = flatten_(c, text, links)
