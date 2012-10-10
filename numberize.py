@@ -215,7 +215,7 @@ def search_and_replace_paragraph2(elem):
         if len(match.group(1)) > 1: # It's escaped; strip a '$' and move on.
             replace_in_linked_string(text, match.start(1), match.start(1)+1, "")
         else:
-            sl = [x for x in links.keys() if x != 'current_i']
+            sl = [x for x in links.spans.keys()]
             sl.sort()
             if not heading_numbers.has_key(match.group(2)):
                 sys.stderr.write("WARNING: Bad reference to heading $%s\n" % match.group(2))
@@ -257,12 +257,17 @@ def number_footnotes(elem, cite_count=1, fn_count=1):
         cite_count, fn_count = number_footnotes(c, cite_count, fn_count)
     return cite_count, fn_count
 
+class Links(object):
+    def __init__(self):
+        self.spans = { }
+        self.current_i = 0
+
 def flatten_(elem, text, links):
     if elem.tag == T_SPAN and not (len(list(elem)) > 0 and elem[0].tag == T_NOTE):
         if elem.text:
             text.write(elem.text)
-            links[(links['current_i'], links['current_i']+len(elem.text))] = dict(type="text", elem=elem)
-            links['current_i'] += len(elem.text)
+            links.spans[(links.current_i, links.current_i+len(elem.text))] = dict(type="text", elem=elem)
+            links.current_i += len(elem.text)
 
         for child in elem:
             if child.tail or child.tag == T_TAB or child.tag == T_S: # Regex matching is sensitive to tabs so must include these.
@@ -279,29 +284,29 @@ def flatten_(elem, text, links):
                             sys.exit(1)
                     text.write((child.tag == T_TAB and '\t' or ' ') * add)
 
-                links['current_i'] += add
+                links.current_i += add
 
                 if child.tail:
                     text.write(child.tail)
-                    links[(links['current_i'], links['current_i'] + len(child.tail))] = dict(type="tail", elem=child)
-                    links['current_i'] += len(child.tail)
+                    links.spans[(links.current_i, links.current_i + len(child.tail))] = dict(type="tail", elem=child)
+                    links.current_i += len(child.tail)
     else:
         for c in elem:
             current_i = flatten_(c, text, links)
 
     if elem.tail and elem.tail != '':
         text.write(elem.tail)
-        links[(links['current_i'], links['current_i']+len(elem.tail))] = dict(type="tail", elem=elem)
-        links['current_i'] += len(elem.tail)
+        links.spans[(links.current_i, links.current_i+len(elem.tail))] = dict(type="tail", elem=elem)
+        links.current_i += len(elem.tail)
 
 def flatten(elem):
     text = StringIO.StringIO()
-    links = dict(current_i=0)
+    links = Links()
     flatten_(elem, text, links)
     return (text.getvalue(), links)
 
 def replace_in_linked_string(string, start, end, links, replacement):
-    ks = links.keys()
+    ks = links.spans.keys()
     ks.sort()
     rks = filter(lambda k: k[0] < end and k[1] > start, ks)
 
@@ -309,29 +314,29 @@ def replace_in_linked_string(string, start, end, links, replacement):
         return
 #    debug_print_linked_string(string, links, keys=rks)
 
-    into = getattr(links[rks[0]]['elem'], links[rks[0]]['type']) or ""
+    into = getattr(links.spans[rks[0]]['elem'], links.spans[rks[0]]['type']) or ""
     new = into[:start-rks[0][0]] + replacement + into[start-rks[0][0]+(end-start):]
-    setattr(links[rks[0]]['elem'], links[rks[0]]['type'], new)
+    setattr(links.spans[rks[0]]['elem'], links.spans[rks[0]]['type'], new)
 #    sys.stderr.write("Replacing 1st with '%s'\n" % new)
 
     for k in rks[1:-1]:
-        setattr(links[k]['elem'], links[k]['type'], "")
+        setattr(links.spans[k]['elem'], links.spans[k]['type'], "")
 #        sys.stderr.write("Setting %i to empty\n" % rks.index(k))
 
     if len(rks) >= 2:
-        into2 = getattr(links[rks[-1]]['elem'], links[rks[-1]]['type']) or ""
+        into2 = getattr(links.spans[rks[-1]]['elem'], links.spans[rks[-1]]['type']) or ""
         new = into2[end - rks[-1][0]:]
-        setattr(links[rks[-1]]['elem'], links[rks[-1]]['type'], new)
+        setattr(links.spans[rks[-1]]['elem'], links.spans[rks[-1]]['type'], new)
 #        sys.stderr.write("Setting last to '%s'\n" % new)
 
 def debug_print_linked_string(string, links, keys=None):
-    if keys is None: keys = links.keys()
+    if keys is None: keys = links.spans.keys()
     sys.stderr.write("[[\n")
-    lks = links.keys()
+    lks = links.spans.keys()
     lks.sort()
     for k in lks:
         if k != "current_i" and k in keys:
-            sys.stderr.write("%i, %i [%s]: '%s'\n" % (k[0], k[1], links[k]['type'], string[k[0]:k[1]].encode('utf-8')))
+            sys.stderr.write("%i, %i [%s]: '%s'\n" % (k[0], k[1], links.spans[k]['type'], string[k[0]:k[1]].encode('utf-8')))
     sys.stderr.write("]]\n\n")
 
 with zipfile.ZipFile(sys.argv[1], 'r') as odt:
